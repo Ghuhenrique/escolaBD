@@ -1,4 +1,13 @@
 import mysql.connector
+import os
+
+# ==============================
+# CONFIGURAÇÕES
+# ==============================
+CONTAINER_NAME = "mysql_algebra"
+DB_NAME = "universidade"
+DB_USER = "root"
+DB_PASSWORD = "root"
 
 # ==============================
 # CONEXÃO COM O BANCO
@@ -6,9 +15,9 @@ import mysql.connector
 try:
     conexao = mysql.connector.connect(
         host="localhost",
-        user="root",
-        password="root",
-        database="universidade"
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME
     )
 
     cursor = conexao.cursor()
@@ -25,7 +34,6 @@ print("=== TESTE DE COMMIT ===")
 try:
     conexao.start_transaction()
 
-    # Usa um aluno que EXISTE (ex: 1)
     cursor.execute("""
         INSERT INTO MATRICULAS (Matr, Disc, T, Sem)
         VALUES (%s, %s, %s, %s)
@@ -39,7 +47,7 @@ except Exception as e:
     print("Erro (rollback executado):", e, "\n")
 
 # ==============================
-# 2. TESTE DE ROLLBACK (ERRO)
+# 2. TESTE DE ROLLBACK
 # ==============================
 print("=== TESTE DE ROLLBACK ===")
 try:
@@ -61,7 +69,49 @@ except Exception as e:
     print("Erro capturado:", e, "\n")
 
 # ==============================
-# 3. LISTA DE ALUNOS
+# 3. TRANSAÇÃO COM CONCORRÊNCIA (FOR UPDATE)
+# ==============================
+print("=== TRANSAÇÃO COM CONTROLE DE CONCORRÊNCIA ===")
+
+try:
+    conexao.start_transaction()
+
+    matr = 1
+    disc = "BD"
+
+    cursor.execute("""
+        SELECT * FROM ALUNOS
+        WHERE Matr = %s
+        FOR UPDATE
+    """, (matr,))
+
+    aluno = cursor.fetchone()
+
+    if not aluno:
+        raise Exception("Aluno não existe")
+
+    cursor.execute("""
+        SELECT * FROM MATRICULAS
+        WHERE Matr = %s AND Disc = %s
+    """, (matr, disc))
+
+    if cursor.fetchone():
+        raise Exception("Aluno já matriculado nessa disciplina")
+
+    cursor.execute("""
+        INSERT INTO MATRICULAS (Matr, Disc, T, Sem)
+        VALUES (%s, %s, %s, %s)
+    """, (matr, disc, 1, "2026.2"))
+
+    conexao.commit()
+    print("Matrícula realizada com segurança!\n")
+
+except Exception as e:
+    conexao.rollback()
+    print("Erro:", e, "\n")
+
+# ==============================
+# 4. LISTA DE ALUNOS
 # ==============================
 print("=== LISTA DE ALUNOS ===")
 cursor.execute("SELECT * FROM ALUNOS")
@@ -70,7 +120,7 @@ for aluno in cursor.fetchall():
 print()
 
 # ==============================
-# 4. LISTA DE DISCIPLINAS
+# 5. LISTA DE DISCIPLINAS
 # ==============================
 print("=== LISTA DE DISCIPLINAS ===")
 cursor.execute("SELECT DISTINCT Disc FROM MATRICULAS")
@@ -79,7 +129,7 @@ for disc in cursor.fetchall():
 print()
 
 # ==============================
-# 5. MATRÍCULAS POR SEMESTRE
+# 6. MATRÍCULAS POR SEMESTRE
 # ==============================
 print("=== MATRÍCULAS POR SEMESTRE ===")
 semestre = input("Digite o semestre (ex: 2026.1): ")
@@ -99,7 +149,7 @@ else:
 print()
 
 # ==============================
-# 6. CONSULTA DE MATRÍCULAS POR ALUNO
+# 7. CONSULTA POR ALUNO
 # ==============================
 print("=== CONSULTA POR ALUNO ===")
 matricula_aluno = input("Digite a matrícula do aluno: ")
@@ -122,7 +172,7 @@ else:
 print()
 
 # ==============================
-# 7. CANCELAMENTO DE MATRÍCULA
+# 8. CANCELAMENTO DE MATRÍCULA
 # ==============================
 print("=== CANCELAMENTO DE MATRÍCULA ===")
 try:
@@ -139,6 +189,33 @@ try:
 except Exception as e:
     conexao.rollback()
     print("Erro ao cancelar matrícula:", e)
+
+# ==============================
+# 9. BACKUP DO BANCO
+# ==============================
+print("=== BACKUP DO BANCO ===")
+
+backup_cmd = f"docker exec {CONTAINER_NAME} mysqldump -u {DB_USER} -p{DB_PASSWORD} {DB_NAME} > backup.sql"
+
+if os.system(backup_cmd) == 0:
+    print("Backup realizado com sucesso!\n")
+else:
+    print("Erro ao fazer backup.\n")
+
+# ==============================
+# 10. RESTAURAÇÃO DO BANCO
+# ==============================
+print("=== RESTAURAÇÃO DO BANCO ===")
+
+restaurar = input("Deseja restaurar o banco? (s/n): ")
+
+if restaurar.lower() == 's':
+    restore_cmd = f"docker exec -i {CONTAINER_NAME} mysql -u {DB_USER} -p{DB_PASSWORD} {DB_NAME} < backup.sql"
+
+    if os.system(restore_cmd) == 0:
+        print("Banco restaurado com sucesso!\n")
+    else:
+        print("Erro ao restaurar.\n")
 
 # ==============================
 # ENCERRAMENTO
