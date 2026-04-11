@@ -1,13 +1,14 @@
 -- ==============================
--- CRIAR BANCO
+-- RESET DO BANCO
 -- ==============================
-CREATE DATABASE IF NOT EXISTS universidade;
+DROP DATABASE IF EXISTS universidade;
+CREATE DATABASE universidade;
 USE universidade;
 
 -- ==============================
 -- TABELA: CURSOS
 -- ==============================
-CREATE TABLE CURSOS (
+CREATE TABLE IF NOT EXISTS CURSOS (
     Cod VARCHAR(10) PRIMARY KEY,
     Nome VARCHAR(100) NOT NULL,
     Depto VARCHAR(100),
@@ -15,14 +16,15 @@ CREATE TABLE CURSOS (
 );
 
 -- ==============================
--- TABELA: ALUNOS
+-- TABELA: ALUNOS (COM CAMPUS)
 -- ==============================
-CREATE TABLE ALUNOS (
+CREATE TABLE IF NOT EXISTS ALUNOS (
     Matr INT PRIMARY KEY,
     Nome VARCHAR(100) NOT NULL,
     Sexo CHAR(1) CHECK (Sexo IN ('M','F')),
     Cr VARCHAR(10),
-    
+    Campus VARCHAR(50),
+
     -- CHAVE ESTRANGEIRA (curso)
     FOREIGN KEY (Cr) REFERENCES CURSOS(Cod)
     ON DELETE SET NULL
@@ -30,13 +32,13 @@ CREATE TABLE ALUNOS (
 );
 
 -- ==============================
--- TABELA: MATRICULAS
+-- TABELA: MATRICULAS (COM CHECK EM SEMESTRE)
 -- ==============================
-CREATE TABLE MATRICULAS (
+CREATE TABLE IF NOT EXISTS MATRICULAS (
     Matr INT,
     Disc VARCHAR(50),
     T INT CHECK (T >= 1),
-    Sem VARCHAR(10),
+    Sem VARCHAR(10) CHECK (Sem IN ('2025.1','2025.2','2026.1')),
 
     -- CHAVE PRIMÁRIA COMPOSTA
     PRIMARY KEY (Matr, Disc, Sem),
@@ -56,32 +58,37 @@ INSERT INTO CURSOS VALUES
 ('ADM', 'Administracao', 'Humanas', 'Carlos');
 
 -- ==============================
--- INSERINDO ALUNOS
+-- INSERINDO ALUNOS (COM CAMPUS)
 -- ==============================
 INSERT INTO ALUNOS VALUES
-(1, 'Ana', 'F', 'CC'),
-(2, 'Bruno', 'M', 'SI'),
-(3, 'Carla', 'F', 'CC'),
-(4, 'Daniel', 'M', 'ADM'),
-(5, 'Eduarda', 'F', 'SI'),
-(6, 'Felipe', 'M', 'CC'),
-(7, 'Gabriela', 'F', 'ADM'),
-(8, 'Henrique', 'M', 'SI'),
-(9, 'Isabela', 'F', 'CC'),
-(10, 'Joao', 'M', 'ADM');
+(1, 'Ana', 'F', 'CC', 'Goiania'),
+(2, 'Bruno', 'M', 'SI', 'Anapolis'),
+(3, 'Carla', 'F', 'CC', 'Uruacu'),
+(4, 'Daniel', 'M', 'ADM', 'Goiania'),
+(5, 'Eduarda', 'F', 'SI', 'Anapolis'),
+(6, 'Felipe', 'M', 'CC', 'Uruacu'),
+(7, 'Gabriela', 'F', 'ADM', 'Goiania'),
+(8, 'Henrique', 'M', 'SI', 'Anapolis'),
+(9, 'Isabela', 'F', 'CC', 'Uruacu'),
+(10, 'Joao', 'M', 'ADM', 'Goiania');
 
 -- ==============================
--- INSERINDO MATRICULAS
+-- INSERINDO MATRICULAS (COM SEMESTRES VARIADOS)
 -- ==============================
 INSERT INTO MATRICULAS VALUES
-(1, 'BD', 1, '2026.1'),
-(1, 'POO', 1, '2026.1'),
+-- 2025.1
+(1, 'BD', 1, '2025.1'),
+(2, 'ENG', 1, '2025.1'),
+(3, 'POO', 1, '2025.1'),
+
+-- 2025.2
+(1, 'POO', 1, '2025.2'),
+(4, 'ADM1', 1, '2025.2'),
+(5, 'ENG', 1, '2025.2'),
+
+-- 2026.1
 (2, 'BD', 1, '2026.1'),
-(2, 'ENG', 1, '2026.1'),
-(3, 'POO', 1, '2026.1'),
 (3, 'ED', 1, '2026.1'),
-(4, 'ADM1', 1, '2026.1'),
-(5, 'ENG', 1, '2026.1'),
 (6, 'BD', 1, '2026.1'),
 (6, 'ED', 1, '2026.1');
 
